@@ -269,7 +269,7 @@ def get_test_images(batch_size, path_test_faces, path_segmented_faces):
         num_workers=4)
 
     dataiter = iter(test_loader_images)
-    test_images = dataiter.next()
+    test_images = next(dataiter)
 
     return test_images
 
