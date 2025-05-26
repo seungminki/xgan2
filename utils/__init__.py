@@ -249,9 +249,9 @@ def remove_background(model, path_test_faces, path_segmented_faces):
         remove_background_image(model, path + filename, output_path)
 
 
-def get_test_images(model, batch_size, path_test_faces, path_segmented_faces):
+def get_test_images(batch_size, path_test_faces, path_segmented_faces):
 
-    remove_background(model, path_test_faces, path_segmented_faces)
+    # remove_background(model, path_test_faces, path_segmented_faces)
 
     path_test_images = path_segmented_faces
 

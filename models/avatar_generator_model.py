@@ -58,7 +58,7 @@ class Avatar_Generator_Model():
         self.writer = SummaryWriter(self.config.log_dir)
         self.device = torch.device("cuda:" + (os.getenv('N_CUDA')if os.getenv('N_CUDA') else "0") if self.config.use_gpu and torch.cuda.is_available() else "cpu")
 
-        self.segmentation = pspnet_101_voc12()
+        # self.segmentation = pspnet_101_voc12()
         self.e1, self.e2, self.d1, self.d2, self.e_shared, self.d_shared, self.c_dann, self.discriminator1, self.denoiser = self.init_model(self.device, self.config.dropout_rate_eshared, self.use_wandb)
 
     def init_model(self, device, dropout_rate_eshared, use_wandb=True):
@@ -98,8 +98,9 @@ class Avatar_Generator_Model():
         return (e1, e2, d1, d2, e_shared, d_shared, c_dann, discriminator1, denoiser)
 
     def generate(self, path_filename, output_path):
-        face = self.__extract_face(path_filename, output_path)
-        return self.__to_cartoon(face, output_path)
+        # face = self.__extract_face(path_filename, output_path)
+        face_image = Image.open(path_filename)
+        return self.__to_cartoon(face_image, output_path)
 
     def load_weights(self, weights_path):
 
@@ -131,10 +132,10 @@ class Avatar_Generator_Model():
             torch.load(weights_path + 'c_dann.pth', map_location=torch.device(self.device)))
 
     def __extract_face(self, path_filename, output_path):
-        out = self.segmentation.predict_segmentation(
-            inp=path_filename,
-            out_fname=output_path
-        )
+        # out = self.segmentation.predict_segmentation(
+        #     inp=path_filename,
+        #     out_fname=output_path
+        # )
 
         img_mask = cv2.imread(output_path)
         img1 = cv2.imread(path_filename)  # READ BGR
@@ -456,7 +457,8 @@ class Avatar_Generator_Model():
         criterion_l1.to(self.device)
         criterion_l2.to(self.device)
 
-        images_faces_to_test = get_test_images(self.segmentation, self.config.batch_size, self.config.root_path + self.config.dataset_path_test_faces, self.config.root_path + self.config.dataset_path_segmented_faces)
+        # images_faces_to_test = get_test_images(self.segmentation, self.config.batch_size, self.config.root_path + self.config.dataset_path_test_faces, self.config.root_path + self.config.dataset_path_segmented_faces)
+        images_faces_to_test = get_test_images(self.config.batch_size, self.config.root_path + self.config.dataset_path_test_faces, self.config.root_path + self.config.dataset_path_segmented_faces)
 
         for epoch in tqdm(range(self.config.num_epochs)):
             loss_rec1, loss_rec2, loss_dann, loss_sem1, loss_sem2, loss_disc1, loss_gen1, loss_total, loss_denoiser, loss_teach, loss_disc1_real_cartoons, loss_disc1_fake_cartoons = self.train_step(epoch, train_loader_faces, train_loader_cartoons, optimizers, criterion_bc, criterion_l1, criterion_l2)
