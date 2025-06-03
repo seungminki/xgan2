@@ -129,7 +129,8 @@ dmypy.json
 .pyre/
 
 #jpg - data
-data/
+data
+datasets/*
 *.jpg
 weights_trained/
 wandb/
@@ -143,3 +144,10 @@ weights/.DS_Store
 *.zip
 generated/
 datasets/
+
+tensorboard/
+
+*.ipynb
+
+weights/
+weights_trained/
