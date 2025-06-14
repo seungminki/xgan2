@@ -2,25 +2,27 @@ import os
 from PIL import Image
 from rembg import remove
 from facenet_pytorch import MTCNN
+import torch
 
 target_size = (224, 224) # 원하는 해상도
 
-input_folder = "/workspace/google_data/raw"
-output_folder = "/workspace/google_data/white_bg"
-os.makedirs(output_folder, exist_ok=True)
+def preprocess(image_path: str, filename: str, output_folder: str):
 
-def main(image_path: str, filename: str):
 
-    img = Image.open(image_path)
+    img = Image.open(image_path).convert("RGB")
 
     # 얼굴 감지기 초기화
-    mtcnn = MTCNN(keep_all=False)
+    mtcnn = MTCNN(keep_all=False, device='cuda' if torch.cuda.is_available() else 'cpu')
 
     # 얼굴 bounding box 얻기
-    boxes, _ = mtcnn.detect(img)
+    boxes, probs = mtcnn.detect(img)
 
     if boxes is not None:
-        for box in boxes:
+        for box, prob in zip(boxes, probs):
+            if prob is None or prob < 0.90:  # 신뢰도 기준 (0.90 이상만 사용)
+                print(f"{filename}: 얼굴 신뢰도 낮음 ({prob:.2f}), 건너뜀")
+                continue
+            
             x1, y1, x2, y2 = map(int, box)
             
             face_width = x2 - x1
@@ -50,6 +52,8 @@ def main(image_path: str, filename: str):
             # 자르기
             cropped = img.crop((square_x1, square_y1, square_x2, square_y2))
             # cropped.save("face_square_crop.jpg")
+            # save_path = os.path.join(output_folder, f"debug_crop_{filename}")
+            # cropped.save(save_path)
 
             output_image = remove(cropped)
 
@@ -65,10 +69,20 @@ def main(image_path: str, filename: str):
             resized_img.save(save_path)
 
     else:
-        print("얼굴을 찾을 수 없습니다.")
+        print(f"{filename} 얼굴을 찾을 수 없습니다.")
 
+def make_and_process_files(folder_path, indices=[6, 7, 8], output_folder="korean_face/white_bg"):
+    os.makedirs(output_folder, exist_ok=True)
 
-for filename in os.listdir(input_folder):
+    for filename in os.listdir(folder_path):
+        for i in indices:
+            if filename.endswith(f"-{i}.jpg"):
+                image_path = os.path.join(folder_path, filename)
+                preprocess(image_path, filename, output_folder)
+                break  # 일치하는 인덱스 하나만 처리하면 다음 파일로 넘어감
 
-    image_path = os.path.join(input_folder, filename)
-    main(image_path, filename)
+if __name__ == "__main__":
+    input_folder = "/workspace/koreanface(201~250)"
+    output_folder = "/workspace/korean_face_total_raw/white_bg"
+
+    make_and_process_files(input_folder, output_folder=output_folder)
