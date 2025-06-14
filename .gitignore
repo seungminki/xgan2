@@ -143,3 +143,6 @@ weights/.DS_Store
 *.zip
 generated/
 datasets/
+
+tensorboard/
+.DS_Store
