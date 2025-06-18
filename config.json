@@ -19,18 +19,18 @@
     "log_dir": "tensorboard/"
   },
   "model_hparams": {
-    "dropout_rate_eshared": 0.5,
-    "dropout_rate_cdann": 0.5,
+    "dropout_rate_eshared": 0.3,
+    "dropout_rate_cdann": 0.3,
     "num_epochs": 400,
     "learning_rate_opTotal": 1e-4,
-    "learning_rate_opDisc": 1e-3,
-    "learning_rate_denoiser": 1e-3,
-    "learning_rate_opCdann": 2e-4,
+    "learning_rate_opDisc": 5e-5,
+    "learning_rate_denoiser": 5e-4,
+    "learning_rate_opCdann": 1e-4,
     "wRec_loss": 1.0,
-    "wDann_loss": 1.0,
-    "wSem_loss": 0.5,
-    "wGan_loss": 1,
-    "wTeach_loss": 0.75,
+    "wDann_loss": 0.2,
+    "wSem_loss": 0.1,
+    "wGan_loss": 0.05,
+    "wTeach_loss": 0.5,
     "use_gpu": true
   }
 }
