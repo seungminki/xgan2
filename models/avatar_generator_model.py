@@ -61,6 +61,13 @@ class Avatar_Generator_Model():
         # self.segmentation = pspnet_101_voc12()
         self.e1, self.e2, self.d1, self.d2, self.e_shared, self.d_shared, self.c_dann, self.discriminator1, self.denoiser = self.init_model(self.device, self.config.dropout_rate_eshared, self.use_wandb)
 
+        # Perceptual Loss 초기화 추가
+        self.criterion_perceptual = VGGPerceptualLoss(
+            layers=getattr(self.config, 'perceptual_layers', ['relu1_1', 'relu2_1', 'relu3_1', 'relu4_1']),
+            weights=getattr(self.config, 'perceptual_weights', [1.0, 0.75, 0.2, 0.2]),
+            device=self.device
+        ).to(self.device)
+
     def init_model(self, device, dropout_rate_eshared, use_wandb=True):
 
         e1 = Encoder()
@@ -354,6 +361,10 @@ class Avatar_Generator_Model():
             loss_sem2 = L1_norm(cartoons_encoder.detach(), faces_construct_encoder)
             loss_sem = loss_sem1 + loss_sem2
 
+            # Perceptual Loss 계산 추가
+            # print("cartoons_construct.shape:", cartoons_construct.shape)
+            loss_perceptual = self.criterion_perceptual(cartoons_construct, cartoons_batch)
+
             # teach loss
             #faces_embedding = resnet(faces_batch.squeeze())
             #loss_teach = L1_norm(faces_embedding.squeeze(), faces_encoder)
@@ -368,10 +379,13 @@ class Avatar_Generator_Model():
             loss_gen1 = criterion_bc(output.squeeze(), torch.ones_like(
                 output.squeeze(), device=self.device))
 
-            #it has been deleted config.wDann_loss*loss_dann
+            # it has been deleted config.wDann_loss*loss_dann
+            # Perceptual Loss를 총 손실에 추가
             loss_total = self.config.wRec_loss*loss_rec  + \
                 self.config.wSem_loss*loss_sem + self.config.wGan_loss * \
-                loss_gen1 + self.config.wTeach_loss*loss_teach
+                loss_gen1 + self.config.wTeach_loss*loss_teach + \
+                getattr(self.config, 'wPerceptual_loss', 0.2) * loss_perceptual
+            
             loss_total.backward()
 
             optimizerTotal.step()
@@ -419,13 +433,14 @@ class Avatar_Generator_Model():
             self.writer.add_scalar('Train/Loss sem2', loss_sem2, epoch * total_faces)
             self.writer.add_scalar('Train/Loss discriminator', loss_disc1, epoch * total_faces)
             self.writer.add_scalar('Train/Loss generator', loss_gen1, epoch * total_faces)
+            self.writer.add_scalar('Train/Loss perceptual', loss_perceptual, epoch * total_faces)
             self.writer.add_scalar('Train/Loss total', loss_total, epoch * total_faces)
             self.writer.add_scalar('Train/Loss denoiser', loss_denoiser, epoch * total_faces)
             self.writer.add_scalar('Train/Loss teach', loss_teach, epoch * total_faces)
             self.writer.add_scalar('Train/Loss disc real cartoons', loss_disc1_real_cartoons, epoch * total_faces)
             self.writer.add_scalar('Train/Loss disc fake cartoons', loss_disc1_fake_cartoons, epoch * total_faces)
 
-        return loss_rec1, loss_rec2, loss_dann, loss_sem1, loss_sem2, loss_disc1, loss_gen1, loss_total, loss_denoiser, loss_teach, loss_disc1_real_cartoons, loss_disc1_fake_cartoons
+        return loss_rec1, loss_rec2, loss_dann, loss_sem1, loss_sem2, loss_disc1, loss_gen1, loss_total, loss_denoiser, loss_teach, loss_disc1_real_cartoons, loss_disc1_fake_cartoons, loss_perceptual
 
     def train(self):
 
@@ -461,7 +476,7 @@ class Avatar_Generator_Model():
         images_faces_to_test = get_test_images(self.config.batch_size, self.config.root_path + self.config.dataset_path_test_faces, self.config.root_path + self.config.dataset_path_segmented_faces)
 
         for epoch in tqdm(range(self.config.num_epochs)):
-            loss_rec1, loss_rec2, loss_dann, loss_sem1, loss_sem2, loss_disc1, loss_gen1, loss_total, loss_denoiser, loss_teach, loss_disc1_real_cartoons, loss_disc1_fake_cartoons = self.train_step(epoch, train_loader_faces, train_loader_cartoons, optimizers, criterion_bc, criterion_l1, criterion_l2)
+            loss_rec1, loss_rec2, loss_dann, loss_sem1, loss_sem2, loss_disc1, loss_gen1, loss_total, loss_denoiser, loss_teach, loss_disc1_real_cartoons, loss_disc1_fake_cartoons, loss_perceptual = self.train_step(epoch, train_loader_faces, train_loader_cartoons, optimizers, criterion_bc, criterion_l1, criterion_l2)
 
             metrics_log = {
                 "train_epoch": epoch + 1,
@@ -475,6 +490,7 @@ class Avatar_Generator_Model():
                 "loss_disc1": loss_disc1.item(),
                 "loss_gen1": loss_gen1.item(),
                 "loss_teach": loss_teach.item(),
+                "loss_perceptual": loss_perceptual.item(),  # 새로 추가
                 "loss_total": loss_total.item()
             }
 
@@ -522,6 +538,8 @@ class Avatar_Generator_Model():
                                                             1, self.config.num_epochs, loss_total.item()))
             print('Epoch [{}/{}], Loss denoiser: {:.4f}'.format(epoch +
                                                                 1, self.config.num_epochs, loss_denoiser.item()))
+            print('Epoch [{}/{}], Loss perceptual: {:.4f}'.format(epoch +
+                                                                1, self.config.num_epochs, loss_perceptual.item()))
 
         self.writer.flush()
         self.writer.close()
