@@ -8,6 +8,7 @@ import torch.nn as nn
 import torchvision.transforms as transforms
 import torchvision
 from torch.utils.data import DataLoader
+import torch.optim as optim
 
 from tqdm import tqdm
 
@@ -310,21 +311,29 @@ def init_optimizers(model, learning_rate_opDisc, learning_rate_opTotal, learning
     e1, e2, d1, d2, e_shared, d_shared, c_dann, discriminator1, denoiser = model
 
     listDisc1 = list(discriminator1.parameters())
-    optimizerDisc1 = torch.optim.Adam(
-        listDisc1, lr=learning_rate_opDisc, betas=(0.5, 0.999))
+    # optimizerDisc1 = torch.optim.Adam(
+    #     listDisc1, lr=learning_rate_opDisc, betas=(0.5, 0.999))
+    optimizerDisc1 = optim.RMSprop(
+        listDisc1, lr=learning_rate_opDisc)
 
     # listParameters = list(e1.parameters()) + list(e2.parameters()) + list(e_shared.parameters()) + list(d_shared.parameters()) + list(d1.parameters()) + list(d2.parameters()) + list(c_dann.parameters())
     listParameters = list(e1.parameters()) + list(e2.parameters()) + list(e_shared.parameters()) + \
         list(d_shared.parameters()) + \
         list(d1.parameters()) + list(d2.parameters())
-    optimizerTotal = torch.optim.Adam(
-        listParameters, lr=learning_rate_opTotal, betas=(0.5, 0.999))
+    # optimizerTotal = torch.optim.Adam(
+    #     listParameters, lr=learning_rate_opTotal, betas=(0.5, 0.999))
+    optimizerTotal = optim.RMSprop(
+        listParameters, lr=learning_rate_opTotal)
 
-    optimizerDenoiser = torch.optim.Adam(
+    # optimizerDenoiser = torch.optim.Adam(
+    #     denoiser.parameters(), lr=learning_rate_denoiser)
+    optimizerDenoiser = optim.RMSprop(
         denoiser.parameters(), lr=learning_rate_denoiser)
 
-    crit_opt = torch.optim.Adam(
-        c_dann.parameters(), lr=learning_rate_opCdann, betas=(0.5, 0.999))
+    # crit_opt = torch.optim.Adam(
+    #     c_dann.parameters(), lr=learning_rate_opCdann, betas=(0.5, 0.999))
+    crit_opt = optim.RMSprop(
+        c_dann.parameters(), lr=learning_rate_opCdann)
 
     return (optimizerDenoiser, optimizerDisc1, optimizerTotal, crit_opt)
 
